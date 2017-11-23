@@ -10,7 +10,7 @@ fclose: equ &B890
 .texture_base: equ &c000
 
 rows: equ 32
-columns: equ 32
+columns: equ 24
 
 test:
 di
@@ -50,8 +50,8 @@ add hl,bc
 call .rse
 ld (.ustepy+1),de
 call .neg
-sra d
-rr e
+;sra d
+;rr e
 ld (.vstepx+1),de
 ld hl,cosine_table
 add hl,bc
@@ -172,9 +172,9 @@ ld h,a
 exx ; vpos, tex
 add hl,de
 ld c,a
-ld a,&c0+15 ; wrap inside column
+ld a,15 ; wrap inside column
 and h
-or &c0
+or &c0 ; point at texture
 ld h,a
 ld b,h
 ld a,(bc) ; read texel
@@ -203,7 +203,7 @@ pop hl
 .vstepy:
 ld de,&0020 ; v/256 step per y step
 add hl,de
-ld a,&c0+15
+ld a,15
 and h
 or &c0
 ld h,a

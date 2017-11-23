@@ -1,0 +1,221 @@
+; org &4000
+org &100
+
+fopenout: equ &B8A5
+fopenin: equ &B8A2
+foutblock: equ &B8AB
+finblock: equ &B896
+fclose: equ &B890
+
+.texture_base: equ &c000
+
+test:
+di
+LD A,67
+OUT (&13),A
+CALL init_texture
+CALL rz_frame
+JP $ ; infinite loop
+CALL map_scrn_in
+CALL rz_frame
+CALL map_scrn_out
+RET
+
+scrn_to_disk:
+
+CALL map_scrn_in
+LD HL,&F000
+LD DE,&8000
+LD BC,&1000
+LDIR
+CALL map_scrn_out
+LD HL,.filename
+CALL fopenout
+RET NC
+LD HL,&8000
+LD BC,&1000
+CALL foutblock
+JP fclose
+
+scrn_from_disk:
+
+LD HL,.filename
+CALL fopenin
+JR C, .from1
+LD HL, .flag
+LD (HL), 0
+RET
+
+.from1:
+LD HL,&8000
+LD BC,&1000
+CALL finblock
+CALL fclose
+CALL map_scrn_in
+LD HL,&8000
+LD DE,&F000
+LD BC,&1000
+LDIR
+CALL map_scrn_out
+LD HL,.flag
+LD (HL),1
+RET
+
+map_scrn_in:
+
+LD A,(&B003)
+LD (.state),A
+LD A,67
+LD (&B003),A
+OUT (&13),A
+RET
+
+map_scrn_out:
+
+LD A,(.state)
+LD (&B003),A
+OUT (&13),A
+RET
+
+.filename:
+
+DEFM "STYLE.SCN"
+DEFB 0
+
+.flag:
+
+DEFB 0
+
+.state:
+
+DEFB 0
+
+flip_scrn:
+LD IX,.scrn_base
+LD A,(IX+2)
+XOR &10
+OUT (&00),A
+LD (IX+2),A
+RET
+
+include 'syntax.z80'
+
+init_texture:
+ld hl, .texture_base
+ld (hl),0
+ld de, .texture_base+1 
+ld bc, .texture_rows*0x100
+ldir
+ld de, .texture
+ld hl, .texture_base
+ld c, .texture_rows
+.copy_row:
+ld b, .texture_cols
+ld l,0
+.copy_col:
+ld a,(de)
+inc de
+push bc
+ld b,8
+.expand_byte:
+rlc a
+rl (hl) 
+inc l
+djnz .expand_byte
+pop bc
+djnz .copy_col
+inc h
+dec c
+jp nz, .copy_row
+ret
+
+rz_frame:
+
+.upos:
+ld hl,&0000 ; texture xpos
+
+exx ; vpos
+
+.vpos:
+ld hl,.texture_base ; texture ypos
+
+exx ; upos, count
+
+.scrn_base:
+ld ix,&f000
+
+ld c,64 ; lines
+
+.scrn:
+ld b,60 ; chars
+
+push hl ; save upos
+
+.ustepx:
+ld de, &0080 ; u/256 step per x step
+
+exx ; vpos, tex
+push hl ; save vpos
+
+.vstepx:
+ld de, &0000 ; v/256 step per x step
+
+exx ; upos, count
+
+.nextchar:
+ld iy,&800
+
+.nextx:
+add hl,de ; increment upos
+ld a,h
+and 63 ; wrap inside row
+ld h,a
+
+exx ; vpos, tex
+add hl,de
+ld b,h
+ld c,a
+
+ld a,&c0+15 ; wrap inside column
+and b
+ld h,a
+
+ld a,(bc) ; read texel
+
+exx ; upos, count
+
+or iyl
+dec iyh
+jp z,.writechar
+
+rl a
+ld iyl, a
+jp .nextx
+
+.writechar:
+ld (ix+0),a ; write to screen
+inc ix
+
+djnz .nextchar
+
+exx ; vpos, tex
+
+inc ix
+inc ix
+inc ix
+inc ix
+
+pop hl
+.vstepy:
+ld de,&0040 ; v/256 step per y step
+add hl,de
+
+exx ; upos, count
+pop hl
+.ustepy:
+ld de,&0000 ; u/256 step per y step
+add hl,de
+dec c
+jp nz, .scrn
+ret
+

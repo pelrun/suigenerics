@@ -72,46 +72,6 @@ sub d
 ld d,a
 ret
 
-scrn_to_disk:
-
-CALL map_scrn_in
-LD HL,&F000
-LD DE,&8000
-LD BC,&1000
-LDIR
-CALL map_scrn_out
-LD HL,.filename
-CALL fopenout
-RET NC
-LD HL,&8000
-LD BC,&1000
-CALL foutblock
-JP fclose
-
-scrn_from_disk:
-
-LD HL,.filename
-CALL fopenin
-JR C, .from1
-LD HL, .flag
-LD (HL), 0
-RET
-
-.from1:
-LD HL,&8000
-LD BC,&1000
-CALL finblock
-CALL fclose
-CALL map_scrn_in
-LD HL,&8000
-LD DE,&F000
-LD BC,&1000
-LDIR
-CALL map_scrn_out
-LD HL,.flag
-LD (HL),1
-RET
-
 map_scrn_in:
 
 LD A,(&B003)
@@ -127,15 +87,6 @@ LD A,(.state)
 LD (&B003),A
 OUT (&13),A
 RET
-
-.filename:
-
-DEFM "STYLE.SCN"
-DEFB 0
-
-.flag:
-
-DEFB 0
 
 .state:
 

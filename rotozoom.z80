@@ -183,9 +183,22 @@ inc ix
 exx ; upos, count
 djnz .nextchar
 exx ; vpos, tex
-pop ix
-ld de,128
+
+; double scanline
+pop de
+ld hl,64
+add hl,de
+ex de,hl
+
+push bc
+ld bc,columns
+ldir
+pop bc
+
+; move to next line
+ld de,128-columns
 add ix,de
+
 pop hl
 .vstepy:
 ld de,&0020 ; v/256 step per y step

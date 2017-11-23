@@ -35,6 +35,16 @@ inc c
 inc c
 inc c
 push bc
+
+ld hl,(.upos+1)
+ld de,&0062
+add hl,de
+ld (.upos+1),hl
+ld hl,(.vpos+1)
+ld de,&0025
+add hl,de
+ld (.vpos+1),hl
+
 ld hl,sine_table
 add hl,bc
 call .rse

@@ -1,5 +1,3 @@
-; org &4000
-org &100
 
 fopenout: equ &B8A5
 fopenin: equ &B8A2
@@ -10,34 +8,49 @@ fclose: equ &B890
 .texture_base: equ &c000
 
 rows: equ 32
-columns: equ 24
+columns: equ 32
 
-test:
+IF REALNC100
+
+org &6000
+
+realncstart:
+CALL map_scrn_in
+CALL init_texture
+CALL spin
+CALL reset_scrn
+CALL map_scrn_out
+RET
+
+ELSE
+
+org &100
+
+emustart:
 di
 ld sp,&3fff
 LD A,67
 OUT (&13),A
 CALL init_texture
-;CALL rz_frame
-;JP $ ; infinite loop
-JP spin
-CALL map_scrn_in
-CALL rz_frame
-CALL map_scrn_out
-RET
+CALL spin
+JP $
+
+ENDIF
+
+
 
 include 'trig.z80'
 
 spin:
-ld bc, 4 
+ld bc, 0
 .spin_step
-inc c
-inc c
-inc c
+ld a, 1
+add a,c
+ld c,a
 push bc
 
 ld hl,(.upos+1)
-ld de,&0062
+ld de,&00e0
 add hl,de
 ld (.upos+1),hl
 ld hl,(.vpos+1)
@@ -57,11 +70,17 @@ ld hl,cosine_table
 add hl,bc
 call .rse
 ld (.ustepx+1),de
-sra d
-rr e
+;sra d
+;rr e
 ld (.vstepy+1),de
 call rz_frame
+
 pop bc
+
+in a,(&b1)
+and &04
+ret nz
+
 jp .spin_step
 
 .rse:
@@ -108,6 +127,11 @@ LD A,(IX+2)
 XOR &10
 OUT (&00),A
 LD (IX+2),A
+RET
+
+reset_scrn:
+LD A,&f0
+OUT (&00),A
 RET
 
 include 'syntax.z80'

@@ -2,7 +2,10 @@
 build: rz.bin
 
 rz.bin: rotozoom.z80 syntax.z80 trig.z80
-	pasmo -d rotozoom.z80 rz.bin rz.sym > rz.lst
+	pasmo -E REALNC100=0 -d rotozoom.z80 rz.bin rz.sym > rz.lst
+
+ncroto.bin: rotozoom.z80 syntax.z80 trig.z80
+	pasmo -E REALNC100=1 -d rotozoom.z80 ncroto.bin ncroto.sym > ncroto.lst
 
 syntax.z80: syntax.py
 	python syntax.py > syntax.z80

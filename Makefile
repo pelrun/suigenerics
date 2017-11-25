@@ -21,3 +21,7 @@ trace: rz.bin
 
 run: rz.bin
 	./gnc100em -p rz.bin
+
+upload: ncroto.bin
+	stty -F /dev/ttyUSB0 9600
+	sx ncroto.bin > /dev/ttyUSB0 < /dev/ttyUSB0

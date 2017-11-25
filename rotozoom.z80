@@ -1,22 +1,22 @@
 
-fopenout: equ &B8A5
-fopenin: equ &B8A2
-foutblock: equ &B8AB
-finblock: equ &B896
-fclose: equ &B890
-
 .texture_base: equ &c000
 
 rows: equ 32
-columns: equ 32
+columns: equ 30
+
+rightcols: equ 60-columns
 
 IF REALNC100
+
+txtwrchar: equ &b83c
+txtsetcursor: equ &b836
 
 org &6000
 
 realncstart:
 CALL map_scrn_in
 CALL init_texture
+CALL init_static
 CALL spin
 CALL reset_scrn
 CALL map_scrn_out
@@ -32,12 +32,15 @@ ld sp,&3fff
 LD A,67
 OUT (&13),A
 CALL init_texture
+CALL init_static
 CALL spin
 JP $
 
+txtwrchar:
+txtsetcursor:
+ret
+
 ENDIF
-
-
 
 include 'trig.z80'
 
@@ -48,6 +51,12 @@ ld a, 1
 add a,c
 ld c,a
 push bc
+
+push bc
+ld a,3
+and c
+call z, scroller
+pop bc
 
 ld hl,(.upos+1)
 ld de,&00e0
@@ -70,15 +79,15 @@ ld hl,cosine_table
 add hl,bc
 call .rse
 ld (.ustepx+1),de
-;sra d
-;rr e
+sra d
+rr e
 ld (.vstepy+1),de
 call rz_frame
-
+;call flip_scrn
 pop bc
 
-in a,(&b1)
-and &04
+in a,(&b0)
+and &10 ; port &b0 bit &10 is enter key
 ret nz
 
 jp .spin_step
@@ -123,10 +132,10 @@ DEFB 0
 
 flip_scrn:
 LD IX,.scrn_base
-LD A,(IX+2)
+LD A,(IX+3)
 XOR &10
 OUT (&00),A
-LD (IX+2),A
+LD (IX+3),A
 RET
 
 reset_scrn:
@@ -140,7 +149,7 @@ init_texture:
 ld hl, .texture_base
 ld (hl),0
 ld de, .texture_base+1 
-ld bc, .texture_rows*0x100
+ld bc, &4000 ;.texture_rows*0x100
 ldir
 ld de, .texture
 ld hl, .texture_base
@@ -243,3 +252,68 @@ dec c
 jp nz, .scrn
 ret
 
+static_width: equ 224/8
+static_height: equ 40
+static_x: equ columns+(rightcols-static_width)/2
+static_tex:
+incbin 'static.bin'
+
+write_static:
+ld hl,static_tex
+ld b,static_height
+.writestaticrow:
+push bc
+push de
+ld bc,static_width
+ldir
+pop de
+ex de,hl
+ld bc,64
+add hl,bc
+ex de,hl
+pop bc
+djnz .writestaticrow
+ret
+
+init_static:
+ld de,&f000+static_x
+call write_static
+ld de,&e000+static_x
+call write_static
+ret
+
+scroll_ptr:
+defw scrolltext
+
+defs +(512 - ($ & 511)) ; damn it why is there no alignment directive
+scrolltext:
+incbin 'scrolltext.txt'
+
+MACRO next_char
+inc hl
+ld a,1
+and h
+or +(scrolltext>>8)
+ld h,a
+ENDM
+
+scroller:
+
+ld hl,0x2906
+call txtsetcursor
+
+ld hl,(scroll_ptr)
+push hl
+
+ld b, 38
+.textout:
+ld a,(hl)
+call txtwrchar
+next_char
+djnz .textout
+
+pop hl
+next_char
+ld (scroll_ptr),hl
+
+ret

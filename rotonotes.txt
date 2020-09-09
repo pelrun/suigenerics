@@ -1,0 +1,23 @@
+Vertical slope
+
+add hl,bc ; hl = y, bc = (y3-y1)/h (8 bits fixed point)
+ld a,h
+ld (_address+1),a ; (stored in code: ld bc,xx)
+exx
+add hl,bc ; hl = x, bc = (x3-x1)/h (8 bits fixed point)
+ld a,h
+ld (_address),a ; (stored in code: ld bc,xx)
+exx
+
+Horizontal slope:
+
+add hl,de ; hl = y, de = (y2-y1)/w (8 bits fixed point)
+ld a,h
+exx
+add hl,de ; hl = x, de = (x2-x1)/w (8 bits fixed point)
+ld b,a
+ld c,h
+push bc ; (stored in mem to be reused for all horizontal lines)
+exx
+
+
